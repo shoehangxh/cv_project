@@ -17,10 +17,10 @@ trainset = torchvision.datasets.CIFAR10(root="E:/dataset/cifar10/"
                                         ,download=True
                                         ,transform=transform)
 trainloader = torch.utils.data.DataLoader(
-    trainset
-    ,batchsize=4
-    ,shuffle=True
-    ,num_works=2
+    trainset,
+    batch_size=4,
+    shuffle=True,
+    num_workers=0
 )
 testset = torchvision.datasets.CIFAR10(root="E:/dataset/cifar10/"
                                         ,train=False
@@ -28,9 +28,9 @@ testset = torchvision.datasets.CIFAR10(root="E:/dataset/cifar10/"
                                         ,transform=transform)
 testloader = torch.utils.data.DataLoader(
     testset
-    ,batchsize=4
+    ,batch_size=4
     ,shuffle=True
-    ,num_works=2
+    ,num_workers=0
 )
 cifar10_classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -73,29 +73,32 @@ class VGG(nn.Module):
         return nn.Sequential(*layers)
 
 net = VGG('VGG16')
+net = net.cuda()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 for epoch in range(5):
     train_loss = 0.0
-    for batxh_idx, data in enumerate(trainloader, 0):
+    for batch_idx, data in enumerate(trainloader, 0):
         inputs, labels = data
         optimizer.zero_grad()
+        inputs = inputs.cuda()
+        labels = labels.cuda()
         outputs = net(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
         train_loss += loss.item()
-        if batxh_idx % 2000 == 1999:
-            print('[%d, %5d] loss : %.3f '% (epoch + 1, batxh_idx + 1, train_loss / 2000))
+        if batch_idx % 2000 == 1999:
+            print('[%d, %5d] loss : %.3f '% (epoch + 1, batch_idx + 1, train_loss / 2000))
         train_loss = 0.0
-        print('saving epoch $d model ...' % (epoch + 1))
+        print('saving epoch %d model ...' % (epoch + 1))
         state = {
             'net' : net.state_dict(),
             'epoch' : epoch + 1,
         }
         if not os.path.isdir('checkpoint'):
-            os.makedir('checkpoint')
+            os.mkdir('checkpoint')
         torch.save(state, './checkpoint/cifar10_epoch_%d.ckpt' % (epoch + 1))
     print('Finished training')
